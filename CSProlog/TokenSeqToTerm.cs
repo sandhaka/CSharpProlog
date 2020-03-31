@@ -271,7 +271,7 @@ namespace Prolog
         is a term, it must be an infix; if the next token is a postfix, it must be set to
         postfix. In doing so, however, the precedence and associativity must be compared with
         the precedence of the penultimate token (just below the top token).
-        To make this slightly easier, a token variable ‘prevOd’ (Operator descriptor) has been 
+        To make this slightly easier, a token variable "prevOd" (Operator descriptor) has been 
         introduced, which contains the precedence of the previous token.
 
         The above strategy will guarantee that:
