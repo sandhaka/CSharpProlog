@@ -110,53 +110,53 @@ using Prolog;
 
 namespace PLx
 {
-  class Program
-  {
-    static void Main (string [] args)
+    class Program
     {
-      PrologEngine e = new PrologEngine ();
-      // Example 1 -- the age/2 predicate is a builtin example; defined in Bootstrap.cs
-      
-      Console.WriteLine ("Example 1");
-      Console.WriteLine ();
-
-      SolutionSet ss = e.GetAllSolutions (null, "age(P,N)");
-
-      if (ss.Success)
-      {
-        for (int i = 0; i < ss.Count; i++ ) // or: foreach (Solution s in ss.NextSolution)
+        static void Main(string[] args)
         {
-          Solution s = ss [i];
-          Console.WriteLine ("Solution {0}", i+1);
+            PrologEngine e = new PrologEngine();
+            // Example 1 -- the age/2 predicate is a builtin example; defined in Bootstrap.cs
 
-          foreach (Variable v in s.NextVariable)
-            Console.WriteLine (string.Format ("{0} ({1}) = {2}", v.Name, v.Type, v.Value));
+            Console.WriteLine("Example 1");
+            Console.WriteLine();
+
+            SolutionSet ss = e.GetAllSolutions(null, "age(P,N)");
+
+            if (ss.Success)
+            {
+                for (int i = 0; i < ss.Count; i++) // or: foreach (Solution s in ss.NextSolution)
+                {
+                    Solution s = ss[i];
+                    Console.WriteLine("Solution {0}", i + 1);
+
+                    foreach (Variable v in s.NextVariable)
+                        Console.WriteLine(string.Format("{0} ({1}) = {2}", v.Name, v.Type, v.Value));
+                }
+            }
+            else
+                Console.WriteLine("Failure");
+
+            // Example 2 -- xml generation
+
+            Console.WriteLine("Example 2");
+            Console.WriteLine();
+
+            string result = e.GetAllSolutionsXml(null, null, "age(P,N)");
+            Console.WriteLine(result);
+            Console.WriteLine();
+
+            // Example 3 -- error
+
+            Console.WriteLine("Example 3");
+            Console.WriteLine();
+
+            ss = e.GetAllSolutions(null, "age(P,))))))))))");
+
+            if (ss.HasError)
+                Console.WriteLine("An error occurred: {0}", ss.ErrMsg);
+
+            Console.WriteLine("Press any key to exit");
+            Console.ReadKey();
         }
-      }
-      else
-        Console.WriteLine ("Failure");
-
-      // Example 2 -- xml generation
-
-      Console.WriteLine ("Example 2");
-      Console.WriteLine ();
-
-      string result = e.GetAllSolutionsXml (null, null, "age(P,N)");
-      Console.WriteLine (result);
-      Console.WriteLine ();
-
-      // Example 3 -- error
-
-      Console.WriteLine ("Example 3");
-      Console.WriteLine ();
-      
-      ss = e.GetAllSolutions (null, "age(P,))))))))))");
-
-      if (ss.HasError)
-        Console.WriteLine ("An error occurred: {0}", ss.ErrMsg);
-
-      Console.WriteLine ("Press any key to exit");
-      Console.ReadKey ();
     }
-  }
 }

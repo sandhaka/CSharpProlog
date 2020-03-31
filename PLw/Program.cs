@@ -4,35 +4,35 @@ using System.Windows.Forms;
 
 namespace Prolog
 {
-  static class Program
-  {
-    /// <summary>
-    /// The main entry point for the application.
-    /// </summary>
-    [STAThread]
-    static void Main (string [] args)
+    static class Program
     {
-      if (args.Length > 0) // batch processing assumed if arguments supplied
-      {
-        Prolog.MainForm.BatIO batIO = null;
-
-        try
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
+        static void Main(string[] args)
         {
-          PrologEngine e = new PrologEngine (batIO = new Prolog.MainForm.BatIO ());
-          e.ProcessArgs (args, true);
-          Application.Exit ();
+            if (args.Length > 0) // batch processing assumed if arguments supplied
+            {
+                Prolog.MainForm.BatIO batIO = null;
 
-          return;
-        }
-        finally
-        {
-          if (batIO != null) batIO.Close ();
-        }
-      }
+                try
+                {
+                    PrologEngine e = new PrologEngine(batIO = new Prolog.MainForm.BatIO());
+                    e.ProcessArgs(args, true);
+                    Application.Exit();
 
-      Application.EnableVisualStyles ();
-      Application.SetCompatibleTextRenderingDefault (false);
-      Application.Run (new MainForm ());
+                    return;
+                }
+                finally
+                {
+                    if (batIO != null) batIO.Close();
+                }
+            }
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new MainForm());
+        }
     }
-  }
 }

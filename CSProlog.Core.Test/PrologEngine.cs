@@ -17,7 +17,7 @@ namespace CSProlog.Core.Test
             prolog.ConsultFromString("droid(r2d2).");
             // human is bound to die.
             prolog.ConsultFromString("mortal(X) :- human(X).");
-            
+
             // Question: Shall 'socrates' die?
             var solution1 = prolog.GetFirstSolution(query: "mortal(socrates).");
             Assert.True(solution1.Solved); // = "True" (Yes)
@@ -40,18 +40,18 @@ namespace CSProlog.Core.Test
             prolog.ConsultFromString("mortal(X) :- human(X).");
 
             prolog.GetFirstSolution(query: "listing.");
-         
+
             SolutionSet solutionset1 = prolog.GetAllSolutions(null, "human(H)");
-            Console.WriteLine ("=====================================");
-            Console.WriteLine (solutionset1.ErrMsg);
-            Console.WriteLine ("=====================================");
+            Console.WriteLine("=====================================");
+            Console.WriteLine(solutionset1.ErrMsg);
+            Console.WriteLine("=====================================");
             Assert.True(solutionset1.Success);
             if (solutionset1.Success)
             {
-                var s = solutionset1 [0];
+                var s = solutionset1[0];
                 foreach (Variable v in s.NextVariable)
-                   Console.WriteLine (string.Format ("{0} ({1}) = {2}", v.Name, v.Type, v.Value));
-        
+                    Console.WriteLine(string.Format("{0} ({1}) = {2}", v.Name, v.Type, v.Value));
+
             }
 
         }
