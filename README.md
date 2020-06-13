@@ -23,6 +23,15 @@ class Program
     }
 }
 ```
+## Installation
+
+Run the following command from the Visual Studio Package Manager Console to install the latest version:
+
+`Install-Package CSProlog`
+
+The NuGet page can be found here:\
+<https://www.nuget.org/packages/CSProlog/#>
+
 ## Solution Layout
 ### CSProlog
 Prolog Engine
