@@ -42,7 +42,26 @@ Windows Forms Example
 ### PLx
 An example of how to use the engine within another Program
 
+## Release Notes
 
+### v.6.0.0
+
+- BREAKING CHANGE: Remove "SAMPLES, TESTING & EXPERIMENTAL" predefined predicates. (including CHAT-80 support)
+- Fix: "help" predefined predicate dose not work.
+- Enhance: GetAllSolutions can work with null file name.
+
+### v.5.0.0.1
+
+- Support: .NET Standard 1.4 (.NET Core) and UWP
+
+### v.5.0.0
+
+- BREAKING CHANGE: Remove dependency of "System.Windows.Forms".
+- NuGet package release
+
+### Older versions
+
+Eearlier release notes can be found in [README.doc](README.doc).
 
 ## License
 
