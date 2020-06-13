@@ -51,6 +51,11 @@ Windows Forms Example
 ### PLx
 An example of how to use the engine within another Program
 
+
+## For more documents
+
+Earlier release documents can be found in [README (2007-2014).pdf](README%20(2007-2014).pdf).
+
 ## Release Notes
 
 ### v.6.0.0
@@ -70,7 +75,7 @@ An example of how to use the engine within another Program
 
 ### Older versions
 
-Eearlier release notes can be found in [README.doc](README.doc).
+Earlier release notes can be found in [README (2007-2014).pdf](README%20(2007-2014).pdf).
 
 ## License
 
