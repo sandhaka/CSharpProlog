@@ -16,13 +16,10 @@
 using System;
 using System.Text;
 using System.Collections.Generic;
-using System.Collections;
 
 namespace Prolog
 {
-#if NETSTANDARD
     using ApplicationException = System.Exception;
-#endif
 
     public enum AssocType { None = -1, xfx, xfy, yfx, fx, fy, xf, yf, f } // f: operator as term
     enum AssocGroup { None = -1, Infix, Prefix, Postfix, Zerofix }

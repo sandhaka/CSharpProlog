@@ -14,24 +14,13 @@
 -------------------------------------------------------------------------------------------*/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-#if mswindows
-using System.Security.Principal;
-using System.Resources;
-#endif
-#if !NETSTANDARD
-using System.Configuration;
-using System.Data;
-using System.Data.Common;
-#endif
+
+// ReSharper disable InconsistentNaming
 
 namespace Prolog
 {
@@ -205,25 +194,11 @@ namespace Prolog
             int cntrValue;
             DateTime dati;
             TimeSpan ti;
-#if !NETSTANDARD
-            string cmd = null;
-            bool mustWait = false;
-            SqlTerm sqlt;
-            Process proc;
-            DbConnectionTerm cnt;
-            DbCommand dbCommand;
-#endif
             predicateCallOptions.Clear();
 
             #region switch
             switch (biId)
             {
-#if !NETSTANDARD
-                case BI.license:
-                    Process.Start(Bootstrap.LicenseUrl);
-                    IO.Message("Opening your browser ...");
-                    break;
-#endif
                 case BI.consult: // individual file or list of files
                     t0 = term.Arg(0);
 
@@ -1144,11 +1119,6 @@ namespace Prolog
 
                     if (n > 0) Write(Spaces(n));
                     break;
-#if !NETSTANDARD
-                case BI.errorlevel: // errorlevel( +N) % sets DOS ERRORLEVEL (0..255)
-                    Environment.ExitCode = term.Arg<int>(0);
-                    break;
-#endif
                 case BI.print: // print( X)
                     Write(term.Arg(0), true);
                     break;
@@ -1213,175 +1183,11 @@ namespace Prolog
 
                     IO.WriteLine(File.ReadAllText(fileName));
                     break;
+
                 #endregion Writing
+
                 #endregion IO
 
-                #region SQL
-#if !NETSTANDARD
-                case BI.sql_connect: // sql_connect( +Provider, +Args, -ConnectionInfo)
-                    t0 = term.Arg(0); // msaccess, sqlserver, ...
-                    t1 = term.Arg(1); // Uid, Pwd, Server, Dataset, ..., depending on provider
-                    t2 = term.Arg(2); // Output argument, connection info
-
-                    if (dbCommandSet == null)
-                        dbCommandSet = new DbCommandSet();
-
-                    if (t1.IsAtom || t1.IsString)
-                        t1 = new ListTerm(t1);
-                    else if (!t0.IsAtom || !t1.IsProperList)
-                        return false;
-
-                    if (!t2.IsVar)
-                        IO.Error("Third argument of console/1/2 must be an uninstantiated variable");
-
-                    dbCommand = dbCommandSet.GetCommand(t0, t1);
-                    t2.Unify(new DbConnectionTerm(dbCommand), varStack);
-                    break;
-
-
-                case BI.sql_connection: // sql_connection( +ConnectionInfo, ?Connectstring, ?Command)
-                    t0 = term.Arg(0); // ConnectionInfo as provided by sql_connect
-                    t1 = term.Arg(1); // Output argument: connection string
-                    t2 = term.Arg(2); // Output argument: current command text
-
-                    if (!(t0 is DbConnectionTerm))
-                        IO.Error("Argument of sql_disconnect/1 must be a ConnectionInfo term produced by sql_connect/3");
-
-                    dbCommand = ((DbConnectionTerm)t0).DbCommand;
-
-                    if (!t1.Unify(new StringTerm(dbCommand.Connection.ConnectionString), varStack) ||
-                        !t2.Unify(new StringTerm(dbCommand.CommandText), varStack))
-                        return false;
-                    break;
-
-
-                case BI.sql_disconnect: // sql_disconnect( +ConnectionInfo) disconnect from the database
-                    t0 = term.Arg(0); // msaccess, sqlserver, ...
-
-                    if (!(t0 is DbConnectionTerm))
-                        IO.Error("Argument of sql_disconnect/1 must be a ConnectionInfo term produced by sql_connect/3");
-
-                    if (dbCommandSet != null) // should always be the case
-                        dbCommandSet.Close(t0);
-
-                    break;
-
-
-                // sql_command( CI, Cmd) - execute DB command Cmd (insert, delete, update, ...)
-                case BI.sql_command: // sql_command( CI, Cmd[, N]) -- Execute SQL-command Cmd. Number of rows afected is N
-                    t0 = term.Arg(0);
-                    t1 = term.Arg(1);
-                    string commandText;
-                    int rowsAffected;
-
-                    if (!(t0 is DbConnectionTerm))
-                        IO.Error("First argument of sql_command/2/3 must be a ConnectionInfo term created with sql_connect/3");
-                    else if ((cnt = (DbConnectionTerm)t0).DbCommand.Connection.State != ConnectionState.Open)
-                        IO.Error("Connection is not open. ConnectionInfo:\r\n{0}", cnt.Connectstring);
-
-                    if (t1 is ListTerm)
-                    {
-                        if ((commandText = Utils.Format((ListTerm)t1)) == null) return false;
-                    }
-                    else
-                        commandText = t1.ToString().Dequoted();
-
-                    sqlt = new SqlTerm(t0, commandText, false);
-                    rowsAffected = sqlt.ExecuteNonQuery();
-
-                    if (term.Arity == 3 && !term.Arg(2).Unify(new DecimalTerm(rowsAffected), varStack))
-                        return false;
-
-                    break;
-
-
-                case BI.sql_select: // sql_select( State, CI, SelStat, X) - get the next X from State
-                    t0 = term.Arg(0);
-
-                    if (t0.IsVar) // first call only
-                    {
-                        t1 = term.Arg(1); // Connection info
-
-                        if (!(t1 is DbConnectionTerm))
-                            IO.Error("First argument of sql_select/3 must be a ConnectionInfo term created with sql_connect/3");
-                        else if ((cnt = (DbConnectionTerm)t1).DbCommand.Connection.State != ConnectionState.Open)
-                            IO.Error("Connection is not open. ConnectionInfo:\r\n{0}", cnt.Connectstring);
-
-                        t2 = term.Arg(2); // SELECT-statement
-                        string queryText;
-
-                        if (t2 is ListTerm)
-                        {
-                            if ((queryText = Utils.Format((ListTerm)t2)) == null) return false;
-                        }
-                        else
-                            queryText = t2.ToString().Dequoted();
-
-                        sqlt = new SqlTerm(t1, queryText, (term.Arg(3).HasFunctor("true"))); // cf. help sql_select2
-                        sqlt.ExecuteQuery();
-                        t0.Unify(sqlt, varStack); // bind the SqlTerm to T
-
-                        break;
-                    }
-
-                    sqlt = (SqlTerm)t0;
-
-                    while (true)
-                    {
-                        ListTerm lt = sqlt.SqlNextRecordToListTerm();
-
-                        if (lt == null)
-                        {
-                            term.SetArg(0, Variable.VAR);
-
-                            return false; // done, no (more) records in resultset
-                        }
-
-                        if (term.Arg(3).Unify(lt, varStack)) break;
-                    }
-
-                    break;
-#endif
-                #endregion SQL
-#if !NETSTANDARD
-                case BI.config_setting:
-                    IEnumerator configEnum = null;
-                    t0 = term.Arg(0);
-
-                    if (t0.IsVar) // first call only, Arg(0) contains State info
-                    {
-                        configEnum = ConfigurationManager.AppSettings.AllKeys.GetEnumerator();
-                        term.Arg(0).Unify(new UserClassTerm<IEnumerator>(configEnum), varStack);
-
-                        break;
-                    }
-
-                    configEnum = ((UserClassTerm<IEnumerator>)t0).UserObject;
-
-                    while (true)
-                    {
-                        if (!configEnum.MoveNext())
-                        {
-                            term.SetArg(0, Variable.VAR);
-
-                            return false;
-                        }
-
-                        string key = configEnum.Current as string;
-                        AtomTerm at;
-                        StringTerm st;
-
-                        if ((term.Arg(1).IsUnifiableWith(at = new AtomTerm(key.ToAtom()), varStack)) &&
-                             term.Arg(2).IsUnifiableWith(st = new StringTerm(ConfigurationManager.AppSettings[key]), varStack))
-                        {
-                            term.Arg(1).Unify(at, varStack);
-                            term.Arg(2).Unify(st, varStack);
-
-                            break;
-                        }
-                    }
-                    break;
-#endif
                 case BI.between:
                     IntRangeTerm irt;
 
@@ -1640,110 +1446,6 @@ namespace Prolog
                     if (!term.Arg(2).Unify(new StringTerm(fs), varStack)) return false;
                     break;
 
-
-#if !NETSTANDARD
-                case BI.username: // username( X)
-                    if (!term.Arg(0).Unify(new AtomTerm(Environment.UserName), varStack))
-                        return false;
-                    break;
-
-
-                case BI.shell_sync_d:  // shell( dos(Cmd), A, E)
-                    mustWait = true;
-                    goto case BI.shell_d;
-
-                case BI.shell_d:  // shell, shell( dos(Cmd) [, A])
-                    if (term.Arity > 0 && term.Arg(0).Arity > 0)
-                    {
-                        t0 = term.Arg(0).Arg(0);
-
-                        if (!t0.IsAtomOrString)
-                            IO.Error("Illegal command name '{0}'", t0);
-
-                        cmd = t0.FunctorToString.Dequoted();
-                    }
-                    goto case BI.shell_dos;
-
-                case BI.shell_dos:
-                    proc = new Process();
-
-
-                    if (cmd == null) // just open a DOS-box
-                    {
-                        proc.StartInfo.FileName = "cmd.exe";
-                        proc.Start();
-
-                        break;
-                    }
-
-                    proc.StartInfo.FileName = "cmd.exe";
-                    cmd = " /k " + cmd + ((term.Arity == 1) ? null : ConvertToCmdArgs(term.Arg(1)));
-                    proc.StartInfo.Arguments = cmd;
-                    proc.Start();
-
-                    if (mustWait)
-                    {
-                        proc.WaitForExit();
-                        // unify the last argument with the value for DOS ERRORLEVEL
-
-                        if (!term.Arg(2).Unify(new DecimalTerm(proc.ExitCode), varStack))
-                            return false;
-                    }
-                    break;
-
-
-                case BI.shell_sync_p:  // shell( Path/Cmd, A, E)
-                    mustWait = true;
-                    goto case BI.shell_p;
-
-                case BI.shell_p:  // shell( Path/Cmd, A)
-                    t0 = term.Arg(0).Arg(0);
-
-                    if (!t0.IsAtomOrString)
-                        IO.Error("Illegal path name '{0}'", t0);
-
-                    t1 = term.Arg(0).Arg(1);
-
-                    if (!t1.IsAtomOrString)
-                        IO.Error("Illegal command name '{0}'", t0);
-
-                    cmd = t0.FunctorToString.Dequoted();
-
-                    if (!cmd.EndsWith(Path.DirectorySeparatorChar.ToString()))
-                        cmd = cmd + Path.DirectorySeparatorChar;
-
-                    cmd += t1.FunctorToString.Dequoted();
-                    goto case BI.shell_exe;
-
-                case BI.shell_sync_x:  // shell( Cmd, A, E)
-                    mustWait = true;
-                    goto case BI.shell_x;
-
-                case BI.shell_x:  // shell( Cmd, A)
-                    t0 = term.Arg(0);
-
-                    if (!t0.IsAtomOrString)
-                        IO.Error("Illegal command name '{0}'", t0);
-
-                    cmd = t0.FunctorToString.Dequoted();
-                    goto case BI.shell_exe;
-
-                case BI.shell_exe: // shell_exe( X [,Args] [,wait ,E]). 
-                    proc = new Process();
-                    proc.StartInfo.FileName = cmd;
-                    proc.StartInfo.Arguments = ConvertToCmdArgs(term.Arg(1)).Trim().Dequoted();
-                    proc.Start();
-
-                    if (mustWait)
-                    {
-                        proc.WaitForExit();
-                        // unify the last argument with the value for DOS ERRORLEVEL
-
-                        if (!term.Arg(2).Unify(new DecimalTerm(proc.ExitCode), varStack))
-                            return false;
-                    }
-                    break;
-#endif
                 case BI.predicatePN: // predicate( +P/N)
                     t0 = term.Arg(0);
                     result = true;
@@ -1828,72 +1530,6 @@ namespace Prolog
                     exceptionMessage = (t1 == null) ? t0.FunctorToString : Utils.Format(t0, t1);
                     Throw(exceptionClass, exceptionMessage);
                     break;
-#if !NETSTANDARD
-                case BI.sendmail:
-                    string smtp = null;
-                    string to = null;
-                    string subj = null;
-                    string text = null;
-                    int port = 0;
-
-                    if (term.Arity == 3)
-                    {
-                        string config = ConfigSettings.SmtpHost;
-
-                        if (config == null)
-                            IO.Error("No value found for SmtpHost in config file");
-                        else if (config.IndexOf(':') > 0)
-                        {
-                            smtp = config.Split(':')[0];
-
-                            if (!int.TryParse(config.Split(':')[1], out port) || port <= 0)
-                                IO.Error("Illegal port value '{0}' found for SmtpHost in config file");
-                        }
-                        else
-                        {
-                            smtp = config;
-                            port = 25;
-                        }
-
-                        to = term.Arg(0).FunctorToString;
-                        subj = term.Arg(1).FunctorToString;
-                        text = term.Arg(2).FunctorToString;
-                    }
-                    else if (term.Arity == 4)
-                    {
-                        smtp = term.Arg(0).FunctorToString;
-                        to = term.Arg(1).FunctorToString;
-                        subj = term.Arg(2).FunctorToString;
-                        text = term.Arg(3).FunctorToString;
-                        port = 25;
-                    }
-                    else if (term.Arity == 5)
-                    {
-                        smtp = term.Arg(0).FunctorToString;
-                        port = term.Arg(1).To<int>();
-                        to = term.Arg(2).FunctorToString;
-                        subj = term.Arg(3).FunctorToString;
-                        text = term.Arg(4).FunctorToString;
-                    }
-
-                    if (SendMail(smtp, port, to, subj, text)) break;
-
-                    return false;
-#endif
-#if mswindows
-                case BI.clipboard:
-                    try
-                    {
-                        Utils.SetClipboardData(term.Arg(0).ToString().Dequoted());
-                    }
-                    catch (System.Runtime.InteropServices.ExternalException e)
-                    {
-                        IO.Error("Copy to clipboard failed, message was:\r\n{0}", e.Message);
-
-                        return false;
-                    };
-                    break;
-#endif
                 case BI.today: // date( ?Y, ?M, ?D)
                     y = DateTime.Today.Year;
                     m = DateTime.Today.Month;
@@ -2210,84 +1846,6 @@ namespace Prolog
                         return false;
 
                     break;
-
-#if !NETSTANDARD
-                case BI.xml_term: // xml_term( ?X, ?P [,C]) converts between XML and Prolog representation
-                    BaseTerm ss = null;
-                    bool settings = (term.Arity == 3);
-
-                    t0 = term.Arg(0);
-                    t1 = term.Arg(1);
-
-                    if (settings && !(ss = term.Arg(2)).IsProperList)
-                        IO.Error("xml_term: options must be in a list");
-
-                    if (t0.IsVar)
-                    {
-                        if (t1.IsVar)
-                        {
-                            IO.Error("xml_term: at least one of the arguments must be instantiated");
-
-                            return false;
-                        }
-
-                        x = null;
-
-                        Node.TermToXml(ss, t1, ref x);
-
-                        t2 = NewIsoOrCsStringTerm(x);
-                        //t2 = new StringTerm (x);
-
-                        if (!t0.Unify(t2, varStack)) return false;
-
-                        break;
-                    }
-                    else
-                    {
-                        x = t0.FunctorToString;
-                        inFile = (t0.Arity == 1 && x == "see");  // is it the functor of a source file containing the XML structure?
-                        outFile = (t0.Arity == 1 && x == "tell"); // ... or the functor of a destination file containing the XML structure?
-
-                        if (inFile || outFile)
-                        {
-                            x = Utils.FileNameFromTerm(t0.Arg(0), ".xml");
-
-                            if (x == null) return false;
-                        }
-
-                        if (outFile)
-                        {
-                            if (t1.IsVar) return false;
-
-                            Node.TermToXml(ss, t1, ref x); // t1 is Prolog term
-                        }
-                        else
-                        {
-                            t2 = Node.XmlToTerm(ss, x, inFile);
-
-                            if (!t1.Unify(t2, varStack)) return false;
-                        }
-
-                        break;
-                    }
-
-
-                case BI.xml_transform:
-                    string xmlFileName = term.Arg(0).FunctorToString;
-
-                    if (term.Arity == 1)
-                        XmlTransform(xmlFileName);
-                    else
-                    {
-                        string xslFileName = term.Arg(1).FunctorToString;
-
-                        if (term.Arity == 2)
-                            XmlTransform(xmlFileName, xslFileName);
-                        else
-                            XmlTransform(xmlFileName, xslFileName, term.Arg(2).FunctorToString);
-                    }
-                    break;
-#endif
 
                 case BI.json_term: // json_term( ?J, ?T) converts between JSON file/string and Prolog representation
                     int indentDelta = 2;
@@ -2661,64 +2219,10 @@ namespace Prolog
 
                     break;
 
-#if !NETSTANDARD
-                case BI.xmltrace: // xmltrace( X) -- send the execution tree of the next command to file X
-                                  // Must be the first goal of a command, in order to avoid problems that
-                                  // arise when it gets involved in backtracking.
-                    if (xmlTrace)
-                        IO.Error("Execution trace is already being logged in {0}", xmlFile);
-                    else if (!(t0 = term.Arg(0)).IsAtom && !t0.IsString)
-                        IO.Error("Not a valid file name: '{0}'", t0);
-                    else if (!firstGoal)
-                    {
-                        IO.WriteLine("{0}*** {1}/1/2 must be the first goal of the query -- ignored{0}",
-                                      Environment.NewLine, term.FunctorToString);
-                        break;
-                    }
-                    else if ((xmlFile = Utils.FileNameFromTerm(t0, ".xml")) == null)
-                        return false;
-
-                    n = (term.Arity == 2) ? term.Arg<int>(1) : INF;
-
-                    if (n < 1) IO.Error("Maximum number of elements must exceed 0");
-
-                    XmlTraceOpen(term.FunctorToString, n);
-
-                    break;
-#endif
-
                 case BI.numcols: // numcols( N) -- Number of columns in the DOS-box
-#if mswindows
-                    if (!term.Arg(0).Unify(new DecimalTerm(Utils.NumCols), varStack)) return false;
-
-                    break;
-#else
-          return false;
-#endif
+                    return false;
 
                 case BI.userroles:
-#if mswindows
-                    WindowsIdentity ident = WindowsIdentity.GetCurrent();
-                    WindowsPrincipal principal = new WindowsPrincipal(ident);
-                    //bool admin = principal.IsInRole (WindowsBuiltInRole.Administrator);
-                    IO.Message("{0} belongs to: ", principal.Identity.Name.ToString());
-
-                    Array wbirFields = Enum.GetValues(typeof(WindowsBuiltInRole));
-
-                    foreach (object roleName in wbirFields)
-                    {
-                        try
-                        {
-                            IO.Message("{0}? {1}.", roleName, principal.IsInRole((WindowsBuiltInRole)roleName));
-                        }
-                        catch (Exception)
-                        {
-                            IO.Message("Could not obtain role for RID {0}", roleName);
-                        }
-                    }
-#else
-          IO.Error ("userroles only available if compiler symbol mswindows is defined");
-#endif
                     break;
 
 
@@ -2757,112 +2261,6 @@ namespace Prolog
                         IO.Error(":- stacktrace: illegal argument '{0}'; use 'on' or 'off' instead", mode);
 
                     break;
-#if !NETSTANDARD
-                case BI.ip_address: // return local IP-address
-                    IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
-
-                    foreach (IPAddress ip in host.AddressList)
-                    {
-                        if (ip.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            if (!term.Arg(0).Unify(new AtomTerm(ip.ToString()), varStack))
-                                return false;
-
-                            if (term.Arity == 2)
-                            {
-                                string[] mask = ip.ToString().Split(new char[] { '.' });
-                                ListTerm fields = ListTerm.EMPTYLIST;
-
-                                for (int i = mask.Length - 1; i >= 0; i--)
-                                    fields = new ListTerm(new DecimalTerm(decimal.Parse(mask[i])), fields);
-
-                                if (!term.Arg(1).Unify(fields, varStack))
-                                    return false;
-                            }
-
-                            break;
-                        }
-                    }
-                    break;
-#endif
-#if !NETSTANDARD
-                case BI.environment: // environment( X, Y) -- unify Y with Atom value of environment variable X
-                    t0 = term.Arg(0);
-                    string es;
-
-                    if (!t0.IsAtom) return false;
-
-                    switch (t0.FunctorToString.ToLower())
-                    {
-                        case "applicationdata":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                            break;
-                        case "localapplicationdata":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                            break;
-                        case "cookies":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.Cookies);
-                            break;
-                        case "desktopdirectory":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                            break;
-                        case "internetcache":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.InternetCache);
-                            break;
-                        case "programfiles":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-                            break;
-                        case "startup":
-                            es = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                            break;
-                        case "commandline":
-                            es = Environment.CommandLine;
-                            break;
-                        case "currentdirectory":
-                            es = Environment.CurrentDirectory;
-                            break;
-                        case "machinename":
-                            es = Environment.MachineName;
-                            break;
-                        case "newline":
-                            es = Environment.NewLine;
-                            break;
-                        case "osversion":
-                            es = Environment.OSVersion.ToString();
-                            break;
-                        case "stacktrace":
-                            es = Environment.StackTrace;
-                            break;
-                        case "systemdirectory":
-                            es = Environment.SystemDirectory;
-                            break;
-                        case "tickcount":
-                            es = Environment.TickCount.ToString();
-                            break;
-                        case "userdomainname":
-                            es = Environment.UserDomainName;
-                            break;
-                        case "userinteractive":
-                            es = Environment.UserInteractive.ToString();
-                            break;
-                        case "username":
-                            es = Environment.UserName;
-                            break;
-                        case "version":
-                            es = Environment.Version.ToString();
-                            break;
-                        case "workingset":
-                            es = Environment.WorkingSet.ToString();
-                            break;
-                        default:
-                            IO.Warning("Unrecognized first argument '{0}' for environment/2", term.Arg(0));
-                            return false;
-                    }
-
-                    if (!term.Arg(1).Unify(new StringTerm(es), varStack)) return false;
-
-                    break;
-#endif
 
                 case BI.query_timeout:
                     t0 = term.Arg(0);
@@ -2877,14 +2275,7 @@ namespace Prolog
                     if (!t0.IsInteger || (queryTimeout = t0.To<int>()) < 0) return false;
 
                     break;
-#if mswindows
-                case BI.make_help_resx:
-                    string resxFileName;
-                    Utils.CreateHelpResourceFile(out resxFileName);
-                    IO.WriteLine("\r\n  Resource file '{0}' created.", Path.GetFullPath(resxFileName));
-                    IO.WriteLine("\r\n  Exclude the previous version from the project, add it again, and build.");
-                    break;
-#endif
+
                 case BI.get_counter:
                     globalTermsTable.getctr(term.Arg(0).FunctorToString, out cntrValue);
 
@@ -2986,7 +2377,7 @@ namespace Prolog
 
                */
 
-                // Burrows–Wheeler transform, cf. https://en.wikipedia.org/wiki/Burrows%E2%80%93Wheeler_transform
+                // Burrowsï¿½Wheeler transform, cf. https://en.wikipedia.org/wiki/Burrows%E2%80%93Wheeler_transform
                 case BI.bw_transform: // bw_transform( ?Plain, ?Encoded, ?Index)
                     byte[] buffer_in;
                     byte[] buffer_out;

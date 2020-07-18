@@ -63,5 +63,28 @@ namespace CSProlog.Core.Test
             var s1 = prolog.GetFirstSolution("help.");
             Assert.True(s1.Solved); // = "True" (Yes) [help atleast ran]
         }
+
+        /// <summary>
+        /// A member() recursive implementation
+        /// </summary>
+        [Fact]
+        public void UseMemImpl()
+        {
+            var prolog = new PrologEngine(persistentCommandHistory: false);
+
+            prolog.ConsultFromString("mem(X,[X|List]). mem(X,[Y|List]) :- mem(X,List).");
+
+            var sol1 = prolog.GetFirstSolution(query: "mem(a,[a,g,t,b]).");
+            Assert.True(!prolog.Error & sol1.Solved);
+            var sol2 = prolog.GetFirstSolution(query: "mem(z,[a,g,t,b]).");
+            Assert.True(!prolog.Error);
+            Assert.False(sol2.Solved);
+            var sol3 = prolog.GetFirstSolution(query: "mem(g,[a,g,t,b]).");
+            Assert.True(!prolog.Error & sol3.Solved);
+            var sol4 = prolog.GetFirstSolution(query: "mem(a,[a]).");
+            Assert.True(!prolog.Error & sol4.Solved);
+            var sol5 = prolog.GetFirstSolution(query: "mem(a,[a].");
+            Assert.True(prolog.Error & sol5.Solved);
+        }
     }
 }

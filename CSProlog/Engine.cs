@@ -14,21 +14,16 @@
 -------------------------------------------------------------------------------------------*/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Xml;
 
 namespace Prolog
 {
-#if NETSTANDARD
     using ApplicationException = Exception;
     using Stack = Stack<object>;
-#endif
 
     #region Exceptions
     enum PrologException { ioException }
@@ -85,7 +80,7 @@ namespace Prolog
             public TermNode SaveGoal { get { return saveGoal; } }
 
             public CacheCheckPoint(CachePort port, TermNode saveGoal)
-              : base()
+                : base()
             {
                 this.port = port;
                 this.saveGoal = saveGoal;
@@ -106,7 +101,7 @@ namespace Prolog
             Stack swap;
 
             public VarStack()
-              : base()
+                : base()
             {
                 swap = new Stack();
             }
@@ -293,9 +288,9 @@ namespace Prolog
                 }
 
                 IO.Write("    Warning: '{0}' at line {1} has {2}singleton variable{3} [",
-                  c.Head.Name, lineNo,
-                  singletons.Count == 1 ? "a " : null,
-                  singletons.Count == 1 ? null : "s");
+                    c.Head.Name, lineNo,
+                    singletons.Count == 1 ? "a " : null,
+                    singletons.Count == 1 ? null : "s");
 
                 bool first = true;
 
@@ -325,8 +320,8 @@ namespace Prolog
                 double totSecs = engine.ProcessorTime().TotalSeconds;
 
                 string time = (totSecs > 0.2)  // arbitrary threshold, show 'interesting' values only
-                  ? string.Format(" ({0:f3} sec)", totSecs)
-                  : null;
+                    ? string.Format(" ({0:f3} sec)", totSecs)
+                    : null;
 
                 if (!solved) return NO + time;
 
@@ -344,7 +339,7 @@ namespace Prolog
         #endregion Solution
 
         static readonly string WELCOME =
-    @"|
+            @"|
 | Copyright (C) 2007-2014 John Pool
 |
 | C#Prolog comes with ABSOLUTELY NO WARRANTY. This is free software, licenced
@@ -370,9 +365,6 @@ namespace Prolog
         static OperatorDescr ColonOpDescr;
         bool halted;
         PredicateCallOptions predicateCallOptions;
-#if !NETSTANDARD
-        DbCommandSet dbCommandSet;
-#endif
         OpenFiles openFiles;
         const int INF = Int32.MaxValue;
         VarStack varStack; // stack of variable bindings and choice points
@@ -486,16 +478,6 @@ namespace Prolog
         bool xmlTrace;
         bool reporting;  // debug (also set by 'trace') || xmlTrace
         bool profiling;
-#if !NETSTANDARD
-        XmlTextWriter xtw;
-        string xmlFile;
-        int xmlElCount; // current approximate Number of elements in the XML trace file
-        int xmlMaxEl;   // maximum allowed value of xmlElCount
-        bool firstGoal; // set in ExecuteGoalList() to be able to check whether a goal in the command is the very first
-        bool goalListProcessed;
-        bool goalListResult;
-        ManualResetEvent sema;
-#endif
         ClauseNode retractClause;
         int levelMin; // lowest recursion level while spying -- for determining left margin
         int levelMax; // used while spying for determining end of skip
@@ -530,24 +512,24 @@ namespace Prolog
         static PrologEngine()
         {
             IntroText = string.Format(
-              "|\r\n| Welcome to C#Prolog MS-Windows version {0}, parser {1}\r\n{2}",
-              VERSION, RELEASE, WELCOME);
+                "|\r\n| Welcome to C#Prolog MS-Windows version {0}, parser {1}\r\n{2}",
+                VERSION, RELEASE, WELCOME);
             unifyCount = 0; // running total number of unifications
         }
 
 
         public PrologEngine()
-          : this(new DosIO())
+            : this(new DosIO())
         {
         }
 
         public PrologEngine(BasicIo io)
-          : this(io, persistentCommandHistory: true)
+            : this(io, persistentCommandHistory: true)
         {
         }
 
         public PrologEngine(bool persistentCommandHistory)
-          : this(new DosIO(), persistentCommandHistory)
+            : this(new DosIO(), persistentCommandHistory)
         {
         }
 
@@ -607,10 +589,6 @@ namespace Prolog
             currentFileWriter = null;
             maxWriteDepth = -1; // i.e. no max depth
             predicateCallOptions = new PredicateCallOptions();
-#if !NETSTANDARD
-            xmlFile = null;
-            dbCommandSet = null;
-#endif
             terminalTable = new BaseParser<OpDescrTriplet>.BaseTrie(PrologParser.terminalCount, true);
             PrologParser.FillTerminalTable(terminalTable);
             parser = new PrologParser(this); // now this.terminalTable is passed on as well
@@ -708,11 +686,6 @@ namespace Prolog
                 gensymInt = 0;
                 io.Reset(); // clear input character buffer
                 goalListHead = parser.QueryNode;
-#if !NETSTANDARD
-                xmlFile = null;
-                xmlMaxEl = INF;
-                firstGoal = true;
-#endif
                 if (goalListHead == null) return false;
 
             }
@@ -726,7 +699,7 @@ namespace Prolog
             {
                 error = true;
                 solution.SetMessage("{0}{1}\r\n",
-                  x.Message, userSetShowStackTrace ? Environment.NewLine + x.StackTrace : "");
+                    x.Message, userSetShowStackTrace ? Environment.NewLine + x.StackTrace : "");
 
                 return false;
             }
@@ -738,16 +711,9 @@ namespace Prolog
         public void PostQueryTidyUp()
         {
             openFiles.CloseAllOpenFiles();
-#if !NETSTANDARD
-            XmlTraceClose();
-#endif
             currentFileReader = null;
             currentFileWriter = null;
 
-#if !NETSTANDARD
-            if (dbCommandSet != null)
-                dbCommandSet.CloseAllConnections();
-#endif
         }
         #endregion Query execution preparation and finalization
 
@@ -759,11 +725,7 @@ namespace Prolog
 
             try
             {
-#if NETSTANDARD
-        solution.Solved = ExecuteGoalList ();
-#else
-                solution.Solved = (queryTimeout == 0) ? ExecuteGoalList() : StartExecuteGoalListThread();
-#endif
+                solution.Solved = ExecuteGoalList ();
             }
             catch (AbortQueryException x)
             {
@@ -780,62 +742,11 @@ namespace Prolog
             {
                 error = true;
                 solution.SetMessage("{0}{1}\r\n",
-                  x.Message, (userSetShowStackTrace ? Environment.NewLine + x.StackTrace : ""));
+                    x.Message, (userSetShowStackTrace ? Environment.NewLine + x.StackTrace : ""));
                 solution.Solved = false;
             }
         }
 
-#if !NETSTANDARD
-        bool StartExecuteGoalListThread()
-        {
-            ThreadStart startExecuteGoalList = new ThreadStart(RunExecuteGoalList);
-            Thread run = new Thread(startExecuteGoalList);
-            run.SetApartmentState(ApartmentState.MTA);
-            run.Name = "ExecuteGoalList";
-            run.IsBackground = true;
-            sema = new ManualResetEvent(false);
-            goalListProcessed = false;
-            goalListResult = false;
-            run.Start(); // run will fall through to WaitOne
-            sema.WaitOne(queryTimeout, false); // wait for timeOutMSecs (while the RunExecuteGoalList thread runs)
-
-            if (!goalListProcessed) // goalListProcessed is set by RunExecuteGoalList()
-            {
-                run.Abort();
-                solution.Solved = false;
-
-                return IO.Error("Query execution timed out after {0} milliseconds", queryTimeout);
-            }
-
-            return goalListResult;
-        }
-
-
-        void RunExecuteGoalList()
-        {
-            try
-            {
-                goalListResult = ExecuteGoalList();
-                goalListProcessed = true;
-            }
-            catch (ThreadAbortException) // time-out
-            {
-                return;
-            }
-            catch (Exception e) // any other exception
-            {
-                error = true;
-                goalListProcessed = true;
-                solution.Solved = false;
-
-                throw (e);
-            }
-            finally
-            {
-                sema.Set();
-            }
-        }
-#endif
 
         /*  Although in the code below a number of references is made to 'caching' (storing
             intermediate results of a calculation) this feature is currently not available.
@@ -940,8 +851,8 @@ namespace Prolog
                             default:
                                 PredicateDescr pd = predTable.FindClosestMatch(goal.Name);
                                 string suggestion = (pd == null)
-                                ? null
-                                : string.Format(". Maybe '{0}' is what you mean?", pd.Name);
+                                    ? null
+                                    : string.Format(". Maybe '{0}' is what you mean?", pd.Name);
                                 IO.Error("Undefined predicate: {0}{1}", goal.Name, suggestion);
                                 break;
                         }
@@ -979,15 +890,15 @@ namespace Prolog
 
                 if (reporting &&
                     Debugger(redo ?
-                    SpyPort.Redo :
-                    SpyPort.Call, saveGoal, cleanClauseHead, currClause.NextGoal == null, 2))
+                        SpyPort.Redo :
+                        SpyPort.Call, saveGoal, cleanClauseHead, currClause.NextGoal == null, 2))
                     continue;  // Debugger may return some previous version of saveGoal (retry- or fail-command)
 
                 // UNIFICATION of the current goal and the (clause of the) predicate that matches it
                 if (cleanClauseHead.Unify(goalListHead.Term, varStack))
                 {
                     bool currCachedClauseMustFail =
-                      (currClause is CachedClauseNode && !((CachedClauseNode)currClause).Succeeds);
+                        (currClause is CachedClauseNode && !((CachedClauseNode)currClause).Succeeds);
 
                     currClause = currClause.NextNode; // body - if any - of the matching predicate definition clause
 
@@ -1036,8 +947,8 @@ namespace Prolog
 
                             tn1 = goalListHead.Head.Arg(1).ToGoalList(stackSize, goalListHead.Level);
                             varStack.Push(new ChoicePoint((goalListHead == null)
-                              ? tn1
-                              : tn1.Append(goalListHead.NextGoal), null));
+                                ? tn1
+                                : tn1.Append(goalListHead.NextGoal), null));
 
                             tn0 = goalListHead.Head.Arg(0).ToGoalList(stackSize, goalListHead.Level);
                             goalListHead = (goalListHead == null) ? tn0 : tn0.Append(goalListHead.NextGoal);
@@ -1089,7 +1000,7 @@ namespace Prolog
                             else if (currTerm is Cut)
                                 p = new TermNode(new Cut(stackSize), null, goalListHead.Level + 1); // save the pre-unification state
                             else // Copy (false): keep the varNo constant over all terms of the predicate head+body
-                                 // (otherwise each term would get new variables, independent of their previous incarnations)
+                                // (otherwise each term would get new variables, independent of their previous incarnations)
                                 p = new TermNode(currTerm.Copy(false), currClause.PredDescr, goalListHead.Level + 1); // gets the newVar version
 
                             if (pHead == null)
@@ -1124,9 +1035,6 @@ namespace Prolog
                 }
                 else if (!(redo = CanBacktrack())) // unify failed - try backtracking
                     return false;
-#if !NETSTANDARD
-                firstGoal = false;
-#endif
             } // end of while
 
             return true;
@@ -1167,7 +1075,7 @@ namespace Prolog
                     pd.Cache(saveGoal.Term.Copy(), false);
                 }
                 else
-                  if (reporting && o is SpyPoint)
+                if (reporting && o is SpyPoint)
                 {
                     if (local && ((SpyPoint)o).Port == SpyPort.Fail)
                         Debugger(SpyPort.Fail, ((SpyPoint)o).SaveGoal, null, false, 6); // may reset saveGoal
@@ -1208,7 +1116,7 @@ namespace Prolog
             {
                 string comma = (exceptionClass == null || exceptionMessage == null) ? null : ", ";
                 string msg = string.Format("No CATCH found for throw( {0}{1}\"{2}\")",
-                                            exceptionClass, comma, exceptionMessage);
+                    exceptionClass, comma, exceptionMessage);
                 IO.Error(msg);
             }
         }
@@ -1367,7 +1275,7 @@ namespace Prolog
             int level = goalNode.Level;
 
             if (@"\tdebug\tnodebug\tspy\tnospy\tnospyall\tconsult\ttrace\tnotrace\txmltrace\t".
-              IndexOf(goal.FunctorToString) != -1) return false;
+                IndexOf(goal.FunctorToString) != -1) return false;
 
             if (console) // this part is not required for xmlTrace
             {
@@ -1376,11 +1284,8 @@ namespace Prolog
                 levelMax = INF;   // recover from (q)s(kip) command
                 qskip = false; // ...
                 const int widthMin = 20; // minimal width of writeable portion of line
-#if mswindows
-                int width = Utils.NumCols - 10;
-#else
-        int width = 140;
-#endif
+
+                int width = 140;
                 int indent = 3 * (level - levelMin);
                 int condensedLevel = 0;
 
@@ -1415,22 +1320,6 @@ namespace Prolog
                         s = Utils.WrapWithMargin(currClause.ToString(), lmar, free);
                         IO.Write("{0}{1,2:d2} {2}: {3}", lmar, level, "Try ", s);
                     }
-#if !NETSTANDARD
-                    if (xmlTrace)
-                    {
-                        if (level > prevLevel)
-                        {
-                            xtw.WriteStartElement("body");
-                            xtw.WriteAttributeString("goal", goal.ToString());
-                            xtw.WriteAttributeString("level", level.ToString());
-                        }
-                        else if (level < prevLevel)
-                            xtw.WriteEndElement();
-                        else
-                            XmlTraceWriteTerm("goal", "goal", goal);
-                        XmlTraceWriteTerm("try", isFact ? "fact" : "pred", currClause);
-                    }
-#endif
                     break;
                 case SpyPort.Redo:
                     if (console)
@@ -1438,13 +1327,6 @@ namespace Prolog
                         s = Utils.WrapWithMargin(currClause.ToString(), lmar + "|     ", free);
                         IO.Write("{0,2:d2} {1}: {2}", level, "Try ", s); // fact or clause
                     }
-#if !NETSTANDARD
-                    if (xmlTrace)
-                    {
-                        if (level < prevLevel) xtw.WriteEndElement();
-                        XmlTraceWriteTerm("try", isFact ? "fact" : "clause", currClause);
-                    }
-#endif
                     break;
                 case SpyPort.Fail:
                     if (console)
@@ -1452,13 +1334,6 @@ namespace Prolog
                         s = Utils.WrapWithMargin(goal.ToString(), lmar + "|     ", free);
                         IO.Write("{0,2:d2} Fail: {1}", level, s);
                     }
-#if !NETSTANDARD
-                    if (xmlTrace)
-                    {
-                        if (level < prevLevel) xtw.WriteEndElement();
-                        XmlTraceWriteTerm("fail", "goal", goal);
-                    }
-#endif
                     break;
                 case SpyPort.Exit:
                     if (console)
@@ -1466,13 +1341,6 @@ namespace Prolog
                         s = Utils.WrapWithMargin(goal.ToString(), lmar + "         ", free);
                         IO.Write("{0,2:d2} Exit: {1}", level, s);
                     }
-#if !NETSTANDARD
-                    if (xmlTrace)
-                    {
-                        if (level < prevLevel) xtw.WriteEndElement();
-                        XmlTraceWriteTerm("exit", "match", goal);
-                    }
-#endif
                     break;
             }
 
@@ -1571,14 +1439,6 @@ namespace Prolog
                         else
                         {
                             RetryCurrentGoal(level);
-#if !NETSTANDARD
-                            if (xmlTrace)
-                            {
-                                XmlTraceWriteElement("RETRY",
-                                  (n == INF) ? "Retry entered by user" : String.Format("Retry to level {0} entered by user", level));
-                                XmlTraceWriteEnds(leap);
-                            }
-#endif
                             return true;
                         }
                     case "f":  // Fail
@@ -1591,14 +1451,6 @@ namespace Prolog
                         else
                         {
                             if (!CanBacktrack()) throw new AbortQueryException();
-#if !NETSTANDARD
-                            if (xmlTrace)
-                            {
-                                XmlTraceWriteElement("FAILED",
-                                  (n == INF) ? "Goal failed by user" : String.Format("Retry to level {0} entered by user", level));
-                                XmlTraceWriteEnds(leap);
-                            }
-#endif
                             return true;
                         }
                     case "i":  // ancestors
@@ -1608,9 +1460,6 @@ namespace Prolog
                         SetSwitch("Debugging", ref debug, false);
                         return false;
                     case "a":
-#if !NETSTANDARD
-                        if (xmlTrace) XmlTraceWriteElement("ABORT", "Session aborted by user");
-#endif
                         throw new AbortQueryException();
                     case "+":  // spy this
                         goalNode.PredDescr.SetSpy(true, goalNode.Term.FunctorToString, goalNode.Term.Arity, SpyPort.Full, false);
@@ -1624,21 +1473,21 @@ namespace Prolog
                     case "?":  // help
                     case "h":  // ...
                         string[] help = new string[] {
-              "c, CR       creep       Single-step to the next port",
-              "l           leap        Resume running, switch tracing off; stop at the next spypoint.",
-              "value [<N>] skip        If integer N provided: skip to Exit or Fail port of level N.",
-              "t           out         NOT YET IMPLEMENTED. Skip to the Exit or Fail port of the ancestor.",
-              "q           quasi-skip  Same as skip, but will stop if an intermediate spypoint is found.",
-              "r [<N>]     retry       Transfer control back to the Call port at level N.",
-              "f           fail        Fail the current goal.",
-              "i           ancestors   Show ancestor goals.",
-              "n           nodebug     Switch the debugger off.",
-              "a           abort       Abort the execution of the current query.",
-              "+           spy this    Set a spypoint on the current goal.",
-              "-           nospy this  Remove the spypoint for the current goal, if it exists.",
-              ".           rush        Run to completion without furder prompting.",
-              "?, h        help        Show this text."
-            };
+                            "c, CR       creep       Single-step to the next port",
+                            "l           leap        Resume running, switch tracing off; stop at the next spypoint.",
+                            "value [<N>] skip        If integer N provided: skip to Exit or Fail port of level N.",
+                            "t           out         NOT YET IMPLEMENTED. Skip to the Exit or Fail port of the ancestor.",
+                            "q           quasi-skip  Same as skip, but will stop if an intermediate spypoint is found.",
+                            "r [<N>]     retry       Transfer control back to the Call port at level N.",
+                            "f           fail        Fail the current goal.",
+                            "i           ancestors   Show ancestor goals.",
+                            "n           nodebug     Switch the debugger off.",
+                            "a           abort       Abort the execution of the current query.",
+                            "+           spy this    Set a spypoint on the current goal.",
+                            "-           nospy this  Remove the spypoint for the current goal, if it exists.",
+                            ".           rush        Run to completion without furder prompting.",
+                            "?, h        help        Show this text."
+                        };
                         foreach (string line in help)
                             IO.WriteLine(lmar + filler + line);
                         break;
@@ -1701,75 +1550,11 @@ namespace Prolog
             }
         }
 
-#if !NETSTANDARD // Disable XML Trace feature.
-
-        void XmlTraceOpen(string tag, int maxEl)
-        {
-            xmlMaxEl = maxEl;
-            xmlElCount = 0;
-            xmlTrace = true;
-            reporting = true;
-            xtw = new XmlTextWriter(xmlFile, null);
-            xtw.Formatting = Formatting.Indented;
-            xtw.WriteStartDocument();
-            xtw.WriteStartElement(tag);
-        }
-
-
-        void XmlTraceWriteTerm(string tag, string attr, BaseTerm term)
-        {
-            xtw.WriteStartElement(tag);
-            if (term != null) xtw.WriteAttributeString(attr, term.ToString());
-            xtw.WriteEndElement();
-            XmlTraceCheckMaxElement();
-        }
-
-
-        void XmlTraceWriteElement(string tag, string content)
-        {
-            xtw.WriteStartElement(tag);
-            xtw.WriteString(content);
-            xtw.WriteEndElement();
-            XmlTraceCheckMaxElement();
-        }
-
-
-        void XmlTraceCheckMaxElement()
-        {
-            if (xmlElCount++ < xmlMaxEl) return;
-
-            xtw.WriteStartElement("MAX_EXCEEDED");
-            xtw.WriteString(String.Format("Maximum number of elements ({0}) written", xmlMaxEl));
-            xtw.WriteEndElement();
-
-            XmlTraceClose();
-        }
-
-
-        void XmlTraceWriteEnds(int leap)
-        {
-            for (int i = 0; i < leap; i++) xtw.WriteEndElement();
-        }
-
-
-        void XmlTraceClose()
-        {
-            if (!xmlTrace) return;
-
-            xtw.WriteEndElement();
-            xtw.WriteEndDocument();
-            xtw.Flush();
-            xtw.Close();
-            IO.Message("XML trace file {0} created", xmlFile);
-            xmlFile = null;
-            xmlTrace = false;
-        }
-#endif
         #endregion Debugging
 
         #region Command history
         static string HistoryHelpText =
-    @"
+            @"
   Command history commands:
   ========================
   !!                : show numbered list of previous commands
@@ -1783,55 +1568,22 @@ namespace Prolog
 
   History commands must not be followed by a '.'
 ";
-#if !NETSTANDARD
-        [Serializable] // in order to be able to the retain history between sessions
-#endif
         class CommandHistory : List<string>
         {
-#if !NETSTANDARD
-            ApplicationStorage persistentSettings;
-#endif
             public int cmdNo { get { return Count + 1; } }
             int maxNo; // maximum number of commands to be retained
 
-            public CommandHistory()
-#if NETSTANDARD
-          : this(enablePersistence: false)
-#else
-          : this(enablePersistence: true)
-#endif
+            public CommandHistory() : this(enablePersistence: true)
             {
             }
 
             public CommandHistory(bool enablePersistence)
             {
                 maxNo = Math.Abs(ConfigSettings.HistorySize);
-#if NETSTANDARD
-          if (enablePersistence)
-          {
-            //TODO: enable persistence
-            throw new NotImplementedException();
-          }
-#else
                 if (enablePersistence)
                 {
-                    persistentSettings = new ApplicationStorage();
-                    List<string> history;
-
-                    try
-                    {
-                        history = persistentSettings.Get<List<string>>("CommandHistory", null);
-                    }
-                    catch
-                    {
-                        history = null;
-                    }
-
-                    if (history == null) return;
-
-                    foreach (string cmd in history) Add(cmd);
+                    throw new NotImplementedException();
                 }
-#endif
             }
 
 
@@ -1913,7 +1665,7 @@ namespace Prolog
 
                         char sep = m.Groups["sep"].Value[0];
                         int cmdNo = (m.Groups["cno"].Captures.Count > 0) ?
-                          Convert.ToInt32(m.Groups["cno"].Value) : Count;
+                            Convert.ToInt32(m.Groups["cno"].Value) : Count;
 
                         if (cmdNo < 1 || cmdNo > Count)
                         {
@@ -1973,18 +1725,12 @@ namespace Prolog
             void ClearHistory()
             {
                 Clear();
-#if !NETSTANDARD
-                if (persistentSettings != null) persistentSettings["CommandHistory"] = null;
-#endif
             }
 
 
             public void Persist()
             {
-#if !NETSTANDARD
-                int maxNum = Math.Min(Count, maxNo);
-                if (persistentSettings != null) persistentSettings["CommandHistory"] = GetRange(Count - maxNum, maxNum);
-#endif
+
             }
         }
 
@@ -2092,7 +1838,7 @@ namespace Prolog
             else
             {
                 string msg = string.Format(
-                  "Initial file to be consulted not found (config file says: '{0}')\r\n",
+                    "Initial file to be consulted not found (config file says: '{0}')\r\n",
                     initialConsultFileName);
 
                 IO.Warning(msg);
@@ -2102,17 +1848,6 @@ namespace Prolog
 
         public void CheckConfigFile()
         {
-#if !NETSTANDARD
-            string configFileName = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
-
-            if (!File.Exists(configFileName))
-            {
-                string msg = string.Format(
-                  "No config file ({0}) found: default settings used", configFileName);
-
-                IO.Warning(msg);
-            }
-#endif
         }
 
 

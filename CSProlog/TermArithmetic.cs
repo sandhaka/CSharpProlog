@@ -18,7 +18,6 @@
 // Future: use Visual Studio's 2010 'big number' features ?
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Text;

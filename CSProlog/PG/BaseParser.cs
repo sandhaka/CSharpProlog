@@ -5,13 +5,10 @@ namespace Prolog
     using System;
     using System.IO;
     using System.Text;
-    using System.Xml;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
 
-#if NETSTANDARD
     using ApplicationException = System.Exception;
     using Stack = System.Collections.Generic.Stack<object>;
     using ArrayList = System.Collections.Generic.List<object>;
@@ -21,7 +18,6 @@ namespace Prolog
     {
         public static void TrimToSize(this ArrayList value) => value.TrimExcess();
     }
-#endif
 
     /* _______________________________________________________________________________________________
       |                                                                                               |
@@ -2858,178 +2854,6 @@ namespace Prolog
         }
         #endregion FileWriteBuffer
         #endregion FileBuffer
-
-        #region XmlWriteBuffer
-#if !NETSTANDARD
-        public class XmlWriteBuffer
-        {
-            protected XmlTextWriter tw;
-            protected Stack tagStack; // extra check on matching end tag
-
-            protected void SetInitialValues(bool initialPI)
-            {
-                tagStack = new Stack();
-                tw.QuoteChar = '"';
-                tw.Formatting = Formatting.Indented;
-
-                if (initialPI) tw.WriteProcessingInstruction("xml", "version=\"1.0\" encoding=\"ISO-8859-1\"");
-
-                tw.WriteComment(String.Format(" Structure created at {0} ", DateTime.Now.ToString()));
-            }
-
-
-            void WriteAttributes(params string[] av)
-            {
-                if (av.Length % 2 == 1)
-                    throw new ParserException("*** WriteStartElement -- last attribute value is missing");
-
-                for (int j = 0; j < av.Length; j += 2) tw.WriteAttributeString(av[j], av[j + 1]);
-            }
-
-
-            public void WriteStartElement(string tag, params string[] av)
-            {
-                tw.WriteStartElement(tag);
-                WriteAttributes(av);
-                tagStack.Push(tag);
-            }
-
-
-            public void WriteAttributeString(string name, string value, params string[] av)
-            {
-                tw.WriteAttributeString(name, value);
-                WriteAttributes(av);
-            }
-
-
-            public void WriteEndElement(string tag)
-            {
-                if (tagStack.Count == 0)
-                    throw new ParserException(String.Format("*** Spurious closing tag \"{0}\"", tag));
-
-                string s = (string)tagStack.Peek();
-
-                if (tag != s)
-                    throw new ParserException(String.Format("*** Closing tag \"{0}\" does not match opening tag \"{1}\"", tag, s));
-
-                tw.WriteEndElement();
-                tagStack.Pop();
-            }
-
-
-            public void WriteProcessingInstruction(string name, string text)
-            {
-                tw.WriteProcessingInstruction(name, text);
-            }
-
-
-            public void WriteComment(string text)
-            {
-                tw.WriteComment(text);
-            }
-
-
-            public void WriteString(string text)
-            {
-                tw.WriteString(text);
-            }
-
-
-            public void WriteRaw(string text)
-            {
-                tw.WriteRaw(text);
-            }
-
-
-            public void WriteCData(string text)
-            {
-                tw.WriteCData(text);
-            }
-
-
-            public void WriteSimpleElement(string elementName, string textContent, params string[] av)
-            {
-                tw.WriteStartElement(elementName);
-                WriteAttributes(av);
-                tw.WriteString(textContent);
-                tw.WriteEndElement();
-            }
-
-
-            public void WriteEmptyElement(string elementName, params string[] av)
-            {
-                tw.WriteStartElement(elementName);
-                WriteAttributes(av);
-                tw.WriteEndElement();
-            }
-
-
-            public void Close()
-            {
-                tw.Close();
-            }
-        }
-#endif
-        #endregion XmlWriteBuffer
-
-        #region XmlFileWriter
-#if !NETSTANDARD
-        public class XmlFileWriter : XmlWriteBuffer
-        {
-            public XmlFileWriter(string fileName, bool initialPI)
-            {
-                tw = new XmlTextWriter(fileName, System.Text.Encoding.GetEncoding(1252));
-                SetInitialValues(initialPI);
-            }
-
-
-            public XmlFileWriter(string fileName)
-            {
-                tw = new XmlTextWriter(fileName, System.Text.Encoding.GetEncoding(1252));
-                SetInitialValues(true);
-            }
-        }
-#endif
-        #endregion XmlFileWriter
-
-        #region XmlStringWriter
-#if !NETSTANDARD
-        public class XmlStringWriter : XmlWriteBuffer
-        {
-            public XmlStringWriter(bool initialPI)
-            {
-                tw = new XmlTextWriter(new MemoryStream(), System.Text.Encoding.GetEncoding(1252));
-                SetInitialValues(initialPI);
-            }
-
-
-            public XmlStringWriter()
-            {
-                tw = new XmlTextWriter(new MemoryStream(), System.Text.Encoding.GetEncoding(1252));
-                SetInitialValues(true);
-            }
-
-
-            public void SaveToFile(string fileName)
-            {
-                StreamWriter sw = new StreamWriter(fileName);
-                sw.Write(this.ToString());
-                sw.Close();
-            }
-
-
-            public override string ToString()
-            {
-                Stream ms = tw.BaseStream;
-
-                if (ms == null) return null;
-
-                tw.Flush();
-                return new ASCIIEncoding().GetString(((MemoryStream)ms).ToArray());
-            }
-        }
-#endif
-        #endregion XmlStringWriter
         #endregion Buffer
     }
 

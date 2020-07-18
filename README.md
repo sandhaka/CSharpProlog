@@ -1,4 +1,3 @@
-# CSharpProlog [![NuGet Package](https://img.shields.io/nuget/v/CSProlog.svg)](https://www.nuget.org/packages/CSProlog/) [![Build status](https://ci.appveyor.com/api/projects/status/prufu2gwyb63l3ua?svg=true)](https://ci.appveyor.com/project/jsakamoto/csharpprolog)
 A C# implementation of Prolog
 
 ```csharp
@@ -23,14 +22,6 @@ class Program
     }
 }
 ```
-## Installation
-
-Run the following command from the Visual Studio Package Manager Console to install the latest version:
-
-`Install-Package CSProlog`
-
-The NuGet page can be found here:\
-<https://www.nuget.org/packages/CSProlog/#>
 
 ## Solution Layout
 ### CSProlog
@@ -42,21 +33,14 @@ Unit Tests
 ### PL.NETCore
 Dotnet Core Console Interactive Interpreter (tested in linux and windows)
 
-### PLd
-DOS Console Interactive Interpreter
-
-### PLw
-Windows Forms Example
-
-### PLx
-An example of how to use the engine within another Program
-
-
 ## For more documents
 
 Earlier release documents can be found in [README (2007-2014).pdf](README%20(2007-2014).pdf).
 
 ## Release Notes
+
+### v.7.0.0
+- Remove all pragma directives and target modern Net frameworks.
 
 ### v.6.0.0
 

@@ -20,22 +20,18 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Resources;
 using System.Reflection;
-using System.Collections.Specialized;
 using System.Text;
 using System.IO;
 using System.Linq;
 
 namespace Prolog
 {
-#if NETSTANDARD
     using Hashtable = System.Collections.Generic.Dictionary<object, object>;
     using SortedList = System.Collections.Generic.SortedList<object, object>;
     internal static class HashtableExtension
     {
         public static bool Contains(this Hashtable value, object key) => value.ContainsKey(key);
     }
-
-#endif
 
     public partial class PrologEngine
     {
@@ -1038,11 +1034,8 @@ namespace Prolog
                     FindUndefined(sd, kv.Value);
 
                 IO.WriteLine("The following predicates are undefined:");
-#if NETSTANDARD
+
                 foreach (var kv in sd) IO.WriteLine("  {0}", kv.Key);
-#else
-                foreach (DictionaryEntry kv in sd) IO.WriteLine("  {0}", kv.Key);
-#endif
             }
 
 

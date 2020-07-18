@@ -19,9 +19,7 @@ using System.Text;
 
 namespace Prolog
 {
-#if NETSTANDARD
     using ApplicationException = System.Exception;
-#endif
 
     #region BasicIo
     public abstract class BasicIo

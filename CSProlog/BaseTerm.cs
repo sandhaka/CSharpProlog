@@ -636,7 +636,7 @@ namespace Prolog
             /* TERM COPYING
 
                A term is copied recursively, by first copying its arguments and then creating
-               a new term consisting of the term functor and its copied arguments. The term’s
+               a new term consisting of the term functor and its copied arguments. The termï¿½s
                type is taken into account. A variable is copied by creating a new instance.
 
                In this latter process, there is a complication. If a term contains more
@@ -645,7 +645,7 @@ namespace Prolog
                to check whether that same var has been copied before and to let the copy point
                to that instance rather than creating a new one.
 
-               A solution to this problem is to set a boolean indicator in a term’s variable
+               A solution to this problem is to set a boolean indicator in a termï¿½s variable
                to denote whether it has already been copied. This, however, is not sufficient,
                as one also needs to know what the copied instance is. Therefore, the solution
                that has been adopted, is to equip the variable with an extra field newVar,
@@ -748,10 +748,6 @@ namespace Prolog
                         t = new ListPatternElem(a, ((ListPatternElem)this).downRepFactor, ((ListPatternElem)this).IsNegSearch);
                     else if (this is CompoundTerm)
                         t = new CompoundTerm(functor, a);
-#if !NETSTANDARD
-                    else if (this is DbConnectionTerm)
-                        t = new DbConnectionTerm((DbConnectionTerm)this);
-#endif
                     else
                         IO.Error("CopyEx(): type '{0}' not handled explicitly", this.GetType());
 

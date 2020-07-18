@@ -4,4 +4,5 @@ bin/
 obj/
 packages/
 .vs/
+.idea/
 Dist/

@@ -2,15 +2,7 @@
 namespace Prolog
 {
     using System;
-    using System.IO;
-    using System.Text;
-    using System.Xml;
-    using System.Collections;
     using System.Collections.Generic;
-    using System.Collections.Specialized;
-    using System.Globalization;
-    using System.Threading;
-    using System.Diagnostics;
 
     /* _______________________________________________________________________________________________
       |                                                                                               |
