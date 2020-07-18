@@ -435,6 +435,7 @@ namespace Prolog
        sendmail( Smtp, Port, ToAddr, Subject, Body) :== sendmail.
        clipboard( T)            :== clipboard. % put string value of T on the clipboard
 
+       split(X, L)              :== split.
        format( S, L, X)         :== format.
        now( H, M, S)            :== now.
        validtime( H, M, S)      :== validtime.

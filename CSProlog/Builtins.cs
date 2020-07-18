@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -41,7 +42,7 @@ namespace Prolog
         noverbose, now, number, numbervars, numcols, or, permutation, pp_defines,
         predicatePN, predicateX, print, profile, put, query_timeout, read, readatoms,
         readatom, readeof, readln, regex_match, regex_replace, retract, retractall,
-        reverse, sendmail, see, seeing, seen, set_counter, setenvvar, setvar, shell_d,
+        reverse, see, seeing, seen, set_counter, setenvvar, setvar, shell_d, sendmail,
         shell_p, shell_x, shell_sync_d, shell_sync_p, shell_sync_x, shell_dos, shell_exe,
         showfile, showprofile, silent, sort, spy, spypoints, sql_connect, sql_connection,
         sql_command, sql_disconnect, sql_select, stacktrace, callstack, statistics,
@@ -49,7 +50,7 @@ namespace Prolog
         telling, term_pattern, throw_, time_part, timespan, today, told, trace, treeprint,
         undefineds, unifiable, univ, username, userroles, validdate, validtime, var,
         verbose, version, weekno, workingdir, write, writef, writeln, writelnf, xml_term,
-        xmltrace, xml_transform
+        xmltrace, xml_transform, split
     }
 
     public partial class PrologEngine
@@ -1499,6 +1500,23 @@ namespace Prolog
                     }
 
                     break;
+
+                case BI.split:
+
+                    t0 = term.Arg(0);
+                    t1 = term.Arg(1);
+
+                    if (t0.IsString)
+                    {
+                        var t = t0.FunctorToString;
+
+                        var l = t.Split('-');
+
+                        t1.Unify(new ListTerm(l.Select(k => new StringTerm(k)).ToArray()), varStack);
+                    }
+
+                    break;
+
 
                 case BI.ground: // ground( +T)
                     if (!term.Arg(0).IsGround) return false;
